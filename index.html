@@ -226,7 +226,7 @@ $('#save').onclick=()=>{setDrafts([{id:Date.now(),title:state.title,state:struct
 
 // ---- AI ----
 // Paste your deployed Cloudflare Worker URL here (see worker.js).
-const AI_URL='https://taludtod-ai.YOUR-NAME.workers.dev';
+const AI_URL='https://taludtod-ai.ddpacete.workers.dev';
 async function ask(system,user){
   if(AI_URL.includes('YOUR-NAME'))throw new Error('The AI is not connected yet. Set AI_URL in index.html.');
   let r;try{r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({system,user})})}catch{throw new Error('Could not reach the AI. Check your connection, or write the poem yourself.')}
