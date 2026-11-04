@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taludtod: Filipino poetry workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F2F3EE;--card:#FBFBF8;--ink:#17232E;--muted:#5B6874;--line:#D5DAD3;--sea:#1D5C73;--gold:#B7862A;--ok:#2B7A57;--bad:#B03A48}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 "Instrument Sans",system-ui,sans-serif}
+header{padding:28px clamp(16px,4vw,48px) 8px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+h1{font:600 clamp(2.2rem,5vw,3.2rem)/1 Literata,Georgia,serif;margin:0;letter-spacing:-.02em}
+header p{margin:8px 0 0;color:var(--muted);max-width:54ch}
+h2{font:600 1rem/1.2 "Instrument Sans",sans-serif;margin:0 0 8px}
+main{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:28px;padding:16px clamp(16px,4vw,48px) 64px;align-items:start}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+.rail{background:var(--card);border:1px solid var(--line);border-radius:8px}
+.rail>section{padding:16px 18px;border-bottom:1px solid var(--line)}.rail>section:last-child{border:0}
+.hint{color:var(--muted);font-size:.85rem;margin:6px 0 0}
+label{display:block;font-size:.85rem;font-weight:500;margin-top:10px}
+textarea,select,input[type=text],input[type=number],input[type=password],input:not([type]){width:100%;font:inherit;color:inherit;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+textarea{resize:vertical}
+button{font:inherit;font-weight:500;border-radius:6px;border:1px solid var(--sea);background:transparent;color:var(--sea);padding:8px 14px;cursor:pointer}
+button.primary{background:var(--sea);color:#fff}button:disabled{opacity:.55;cursor:wait}
+button.link{border:0;padding:2px 6px;text-decoration:underline}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.rail button.primary{width:100%;margin-top:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.guide{border-left:4px solid var(--gold);background:var(--card);padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:22px}
+.guide .row{display:flex;gap:8px;flex-wrap:wrap}.guide input{flex:1;min-width:200px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chips span{background:#E7ECE6;border-radius:99px;padding:2px 10px;font-size:.85rem}
+#sugg{display:grid;gap:8px;margin-top:10px}
+#sugg button{text-align:left;background:#fff;border-color:var(--line);color:var(--ink)}
+#sugg small{display:block;color:var(--muted);font-weight:400}
+.title{font:600 1.5rem Literata,Georgia,serif;border:0!important;border-bottom:1px solid var(--line)!important;background:transparent!important;border-radius:0!important;padding-left:0!important;margin-bottom:14px}
+.stanza{border:0;padding:0;margin:0 0 22px}.stanza legend{font-size:.85rem;color:var(--muted);padding:0;margin-bottom:6px}
+.line{display:grid;grid-template-columns:24px 1fr;align-items:center;gap:8px;margin-bottom:6px}
+.ln{color:var(--muted);font-size:.8rem;text-align:right}
+.segs{display:flex;gap:10px;flex-wrap:wrap}.seg{flex:1;min-width:180px}
+.seg input{font:1.05rem Literata,Georgia,serif;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:4px 2px}
+.seg input:focus{border-bottom-color:var(--sea);outline:0}
+.cesura{align-self:center;color:var(--gold);font-weight:600}
+.meter{display:flex;align-items:center;gap:3px;min-height:16px;margin-top:2px}
+.meter i{width:7px;height:7px;border-radius:50%;border:1px solid var(--line)}
+.meter i.on{background:var(--sea);border-color:var(--sea)}.meter i.over{background:var(--bad);border-color:var(--bad)}
+.meter b{font-size:.75rem;color:var(--muted);margin-left:6px;font-weight:500}.meter b.ok{color:var(--ok)}.meter b.off{color:var(--bad)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+#report ul{margin:12px 0 0;padding-left:18px}#report .good{color:var(--ok);font-weight:600;margin-top:12px}
+#status{min-height:1.4em;color:var(--muted)}#status.err{color:var(--bad)}
+#drafts{list-style:none;padding:0;margin:8px 0 0}
+dialog{border:1px solid var(--line);border-radius:8px;max-width:440px;padding:20px}
+menu{display:flex;gap:8px;justify-content:flex-end;padding:0;margin:16px 0 0}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Taludtod</h1><p>Write Filipino verse in forms that keep their shape. Give the AI an idea, or fill in the lines yourself.</p></div>
+</header>
+<main>
+<aside class="rail">
+  <section>
+    <h2>Your idea</h2>
+    <textarea id="idea" rows="4" placeholder="e.g. A mother waiting for a fisherman who has not returned before the storm"></textarea>
+    <button id="gen" class="primary">Generate poem</button>
+    <p class="hint">The AI fills the boxes on the right using the form and metaphor you chose. It is free and shared, so it may pause when busy. Your idea is sent to Google Gemini to write the poem. Writing by hand always works.</p>
+  </section>
+  <section>
+    <h2>Form</h2>
+    <select id="form" aria-label="Poetic form"></select>
+    <p id="formDesc" class="hint"></p>
+    <div class="row2">
+      <label>Language<select id="lang"><option value="fil">Filipino</option><option value="hil">Hiligaynon</option><option value="en">English</option></select></label>
+      <label id="stCtl">Stanzas<input id="stanzas" type="number" min="1" max="6"></label>
+      <label id="lpCtl">Lines per stanza<input id="lps" type="number" min="2" max="12"></label>
+    </div>
+  </section>
+  <section>
+    <details><summary>Saved drafts</summary><ul id="drafts"></ul></details>
+  </section>
+</aside>
+<div class="work">
+  <section class="guide">
+    <h2>Controlling metaphor</h2>
+    <p class="hint" style="margin:0 0 8px">One image your whole poem keeps returning to. Every line should belong to it.</p>
+    <div class="row"><input id="metaphor" placeholder="e.g. Grief is a monsoon"><button id="suggest">Suggest from my idea</button></div>
+    <div id="imgs" class="chips" aria-label="Image bank"></div>
+    <div id="sugg"></div>
+  </section>
+  <input id="title" class="title" placeholder="Title" aria-label="Title">
+  <div id="sheet"></div>
+  <div class="actions">
+    <button id="check" class="primary">Check poem</button>
+    <button id="save">Save draft</button>
+    <button id="copy">Copy poem</button>
+    <button id="clear">Clear lines</button>
+  </div>
+  <div id="report"></div>
+  <p id="status" role="status"></p>
+  <p class="hint">Syllable counts are approximate. Filipino and Hiligaynon count each vowel letter; stress and elision are not modelled.</p>
+</div>
+</main>
+
+<script>
+const $=(s)=>document.querySelector(s);
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+const rep=(n,v)=>Array.from({length:n},()=>v);
+
+// ---- Form definitions: edit here to change any rule ----
+// meter: syllables per line (number, or [a,b] for a line split by a cesura). null = free.
+const FORMS={
+ tanaga:{name:'Tanaga',meter:rep(4,7),stanzas:1,fixed:1,rhyme:1,desc:'Four lines of seven syllables with one rhyme throughout (monorhyme). A compact native verse, often an insight or proverb.'},
+ dalit:{name:'Dalit',meter:rep(4,8),stanzas:1,fixed:1,rhyme:1,desc:'Four lines of eight syllables, monorhyme. A short verse of praise or devotion.'},
+ diona:{name:'Diona',meter:rep(3,7),stanzas:1,fixed:1,rhyme:1,desc:'Three lines of seven syllables, monorhyme. Traditionally about love and courtship.'},
+ awit:{name:'Awit (with cesura)',meter:rep(4,[6,6]),cesura:6,rhyme:1,desc:'Stanzas of four lines, twelve syllables each, monorhyme, slow tempo. Every line pauses at a cesura after the sixth syllable, so each line is written 6 ‖ 6.'},
+ korido:{name:'Korido',meter:rep(4,8),rhyme:1,desc:'Stanzas of four lines, eight syllables each, monorhyme, brisk tempo. Used for narrative.'},
+ haiku:{name:'Haiku',meter:[5,7,5],stanzas:1,fixed:1,desc:'Three lines of 5, 7 and 5 syllables. No required rhyme.'},
+ tanka:{name:'Tanka (tangka)',meter:[5,7,5,7,7],stanzas:1,fixed:1,desc:'Five lines of 5, 7, 5, 7 and 7 syllables. No required rhyme.'},
+ binalaybay:{name:'Ang binalaybay',desc:'Hiligaynon word for poetry. Here it is a flexible verse: you choose the stanzas and lines, with no fixed meter or rhyme. Edit this entry if your class defines a stricter rule.'},
+ freeverse:{name:'Free verse',desc:'No fixed meter or rhyme. You choose the number of stanzas and lines.'}
+};
+for(const k in FORMS){const o=el('option','',FORMS[k].name);o.value=k;$('#form').append(o)}
+
+const state={form:'tanaga',lang:'fil',stanzas:2,lps:4,idea:'',title:'',metaphor:{text:'',images:[]},poem:[]};
+const segsOf=m=>Array.isArray(m)?m:[m];
+function dims(){const f=FORMS[state.form];return{f,stanzas:f.fixed?f.stanzas:state.stanzas,lines:f.meter||rep(state.lps,null)}}
+function reshape(){const d=dims();const g=Array.from({length:d.stanzas},(_,s)=>d.lines.map((m,l)=>segsOf(m).map((_,k)=>state.poem?.[s]?.[l]?.[k]||'')));state.poem=g}
+
+// ---- Counting ----
+const words=t=>t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/['’`]/g,'').replace(/[^a-z]+/g,' ').trim().split(' ').filter(Boolean);
+function enSyl(w){if(w.length<=3)return 1;w=w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,'').replace(/^y/,'');const m=w.match(/[aeiouy]{1,2}/g);return Math.max(1,m?m.length:1)}
+const count=t=>words(t).reduce((n,w)=>n+(state.lang==='en'?enSyl(w):(w.match(/[aeiou]/g)||[]).length),0);
+function rhymeKey(line){const w=words(line).pop()||'';const m=w.match(/[aeiou][^aeiou]*$/);let k=m?m[0]:w;if(state.lang!=='en')k=k.replace(/e/g,'i').replace(/o/g,'u');return k}
+
+function analyze(g){
+  const d=dims(),out=[];
+  g.forEach((st,s)=>{
+    const keys=[];
+    st.forEach((ln,l)=>{
+      const full=ln.join(' ').trim();
+      if(!full){out.push(`Saknong ${s+1}, line ${l+1} is empty.`);return}
+      if(d.f.meter)segsOf(d.lines[l]).forEach((t,k)=>{const c=count(ln[k]);if(c!==t)out.push(`Saknong ${s+1}, line ${l+1}${ln.length>1?(k?' (second half)':' (first half)'):''} has ${c} syllables; it needs ${t}.`)});
+      keys.push([l,rhymeKey(full)]);
+    });
+    if(d.f.rhyme&&keys.length>1)keys.slice(1).forEach(([l,k])=>{if(k!==keys[0][1])out.push(`Saknong ${s+1}, line ${l+1} does not rhyme with line ${keys[0][0]+1} (ends in "-${k}", expected "-${keys[0][1]}").`)});
+  });
+  return out;
+}
+
+// ---- Editor ----
+let refs=[];
+function render(){
+  const d=dims(),sheet=$('#sheet');sheet.innerHTML='';refs=[];
+  state.poem.forEach((st,s)=>{
+    const fs=el('fieldset','stanza');fs.append(el('legend','',`Saknong ${s+1}`));refs[s]=[];
+    st.forEach((ln,l)=>{
+      const row=el('div','line');row.append(el('span','ln',l+1));
+      const segs=el('div','segs'),r={meters:[]};
+      segsOf(d.lines[l]).forEach((t,k)=>{
+        if(k)segs.append(el('span','cesura','‖'));
+        const w=el('div','seg'),inp=document.createElement('input');
+        inp.type='text';inp.autocomplete='off';inp.spellcheck=false;inp.value=ln[k];
+        inp.setAttribute('aria-label',`Saknong ${s+1}, line ${l+1}${t&&d.lines[l].length>1?(k?', second half':', first half'):''}`);
+        inp.addEventListener('input',()=>{state.poem[s][l][k]=inp.value;paint(s,l);save()});
+        const m=el('div','meter');w.append(inp,m);segs.append(w);r.meters.push(m);
+      });
+      row.append(segs);fs.append(row);refs[s][l]=r;
+    });
+    sheet.append(fs);
+  });
+  state.poem.forEach((st,s)=>st.forEach((_,l)=>paint(s,l)));
+}
+function paint(s,l){
+  const d=dims();
+  segsOf(d.lines[l]).forEach((t,k)=>{
+    const c=count(state.poem[s][l][k]),m=refs[s][l].meters[k];m.innerHTML='';
+    if(t!=null)for(let i=0;i<Math.max(t,c);i++)m.append(el('i',i>=t?'over':i<c?'on':''));
+    m.append(el('b',t==null?'':c===t?'ok':c?'off':'',t==null?`${c}`:`${c}/${t}`));
+  });
+}
+
+// ---- Controls ----
+function controls(){const f=FORMS[state.form];$('#formDesc').textContent=f.desc;$('#stCtl').hidden=!!f.fixed;$('#lpCtl').hidden=!!f.meter}
+function drawImgs(){const b=$('#imgs');b.innerHTML='';state.metaphor.images.forEach(w=>b.append(el('span','',w)))}
+function sync(){
+  for(const[id,v]of[['idea',state.idea],['title',state.title],['form',state.form],['lang',state.lang],['stanzas',state.stanzas],['lps',state.lps],['metaphor',state.metaphor.text]])$('#'+id).value=v;
+  reshape();controls();render();drawImgs();
+}
+const bind=(id,fn)=>$('#'+id).addEventListener('input',e=>{fn(e.target.value);save()});
+bind('idea',v=>state.idea=v);bind('title',v=>state.title=v);bind('metaphor',v=>state.metaphor.text=v);
+$('#form').addEventListener('change',e=>{state.form=e.target.value;if(state.form==='binalaybay')state.lang='hil';$('#lang').value=state.lang;reshape();controls();render();$('#report').innerHTML='';save()});
+$('#lang').addEventListener('change',e=>{state.lang=e.target.value;state.poem.forEach((st,s)=>st.forEach((_,l)=>paint(s,l)));save()});
+for(const[id,key,lo,hi]of[['stanzas','stanzas',1,6],['lps','lps',2,12]])$('#'+id).addEventListener('change',e=>{state[key]=Math.min(hi,Math.max(lo,+e.target.value||lo));e.target.value=state[key];reshape();render();save()});
+
+const say=(m,err)=>{const s=$('#status');s.textContent=m;s.className=err?'err':''};
+const save=()=>localStorage.setItem('taludtod.current',JSON.stringify(state));
+
+// ---- Check / copy / clear ----
+function runCheck(){
+  const issues=analyze(state.poem),r=$('#report');r.innerHTML='';
+  if(!issues.length){r.append(el('p','good','All requirements met for this form.'));return 0}
+  const ul=el('ul');issues.forEach(i=>ul.append(el('li','',i)));r.append(el('strong','',`${issues.length} thing${issues.length>1?'s':''} to fix`),ul);return issues.length;
+}
+$('#check').onclick=runCheck;
+$('#copy').onclick=async()=>{
+  const t=(state.title?state.title+'\n\n':'')+state.poem.map(st=>st.map(ln=>ln.join(' / ')).join('\n')).join('\n\n');
+  try{await navigator.clipboard.writeText(t);say('Poem copied.')}catch{say('Copy failed. Select the text and copy it manually.',1)}
+};
+$('#clear').onclick=()=>{state.poem=state.poem.map(st=>st.map(ln=>ln.map(()=> '')));render();$('#report').innerHTML='';save()};
+
+// ---- Drafts ----
+const getDrafts=()=>{try{return JSON.parse(localStorage.getItem('taludtod.drafts'))||[]}catch{return[]}};
+const setDrafts=d=>localStorage.setItem('taludtod.drafts',JSON.stringify(d));
+function drawDrafts(){
+  const ul=$('#drafts');ul.innerHTML='';const ds=getDrafts();
+  if(!ds.length){ul.append(el('li','hint','No drafts yet.'));return}
+  ds.forEach(d=>{const li=el('li');
+    const b=el('button','link',d.title||FORMS[d.state.form].name);b.onclick=()=>{Object.assign(state,structuredClone(d.state));sync();say('Draft loaded.')};
+    const x=el('button','link','Delete');x.onclick=()=>{setDrafts(getDrafts().filter(y=>y.id!==d.id));drawDrafts()};
+    li.append(b,x);ul.append(li)});
+}
+$('#save').onclick=()=>{setDrafts([{id:Date.now(),title:state.title,state:structuredClone(state)},...getDrafts()]);drawDrafts();say('Draft saved in this browser.')};
+
+// ---- AI ----
+// Paste your deployed Cloudflare Worker URL here (see worker.js).
+const AI_URL='https://taludtod-ai.YOUR-NAME.workers.dev';
+async function ask(system,user){
+  if(AI_URL.includes('YOUR-NAME'))throw new Error('The AI is not connected yet. Set AI_URL in index.html.');
+  let r;try{r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({system,user})})}catch{throw new Error('Could not reach the AI. Check your connection, or write the poem yourself.')}
+  if(r.status===429)throw new Error('The free AI is busy or out of quota right now. Try again in a minute, or write the poem yourself.');
+  if(!r.ok)throw new Error(`The AI could not respond (${r.status}).`);
+  return (await r.json()).text;
+}
+function parseJSON(t){const a=t.indexOf('{'),a2=t.indexOf('['),b=Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));const s=(a2>=0&&(a<0||a2<a))?a2:a;return JSON.parse(t.slice(s,b+1))}
+const LANG={fil:'Filipino (Tagalog)',hil:'Hiligaynon',en:'English'};
+
+function rules(){
+  const{f,stanzas,lines}=dims(),L=[`${f.name}: ${f.desc}`,`Exactly ${stanzas} stanza(s), each with exactly ${lines.length} lines.`];
+  if(f.meter){L.push('Syllables per line, in order: '+lines.map(m=>segsOf(m).reduce((a,b)=>a+b,0)).join(', ')+'.');
+    if(f.cesura)L.push(`Write every line as two halves separated by " / " (the cesura), ${f.cesura} syllables on each side.`)}
+  else L.push('No fixed meter.');
+  L.push(f.rhyme?'All lines in a stanza must end in the same rhyme (monorhyme).':'No required rhyme.');
+  L.push(state.lang==='en'?'Count syllables as normally pronounced in English.':'Count syllables by vowel letters: each a, e, i, o, u is one syllable (buwan = 2, tao = 2, ay = 1). Match this count exactly.');
+  return L.join('\n');
+}
+function toGrid(p){
+  const d=dims(),sts=Array.isArray(p.stanzas)?p.stanzas:[];
+  return Array.from({length:d.stanzas},(_,s)=>d.lines.map((m,l)=>{
+    const raw=String(sts[s]?.[l]??'').trim(),segs=segsOf(m);
+    if(segs.length===1)return[raw.replace(/\s*\/\s*/g,' ')];
+    const parts=raw.split('/').map(x=>x.trim());return segs.map((_,k)=>parts[k]||'');
+  }));
+}
+
+$('#gen').onclick=async()=>{
+  if(!state.idea.trim())return say('Write your idea first.',1);
+  const btn=$('#gen');btn.disabled=true;
+  const sys='You are the writing assistant inside Taludtod, a Filipino poetry workshop app. Write original poems only. Reply with JSON only, no commentary.';
+  const base=`Idea: ${state.idea}\nLanguage: ${LANG[state.lang]}\nControlling metaphor: ${state.metaphor.text||'none given; choose one strong metaphor yourself'}\n`+
+    (state.metaphor.images.length?`Image bank to draw from: ${state.metaphor.images.join(', ')}\n`:'')+
+    `Keep the controlling metaphor extended and consistent through the whole poem; do not mix in unrelated images.\n\nForm rules:\n${rules()}\n\n`+
+    'Return JSON: {"title":"...","metaphor":"the controlling metaphor you used, one short sentence","stanzas":[["line","line"],["line","line"]]}';
+  let best=null,bestN=1e9,fb='';
+  try{
+    for(let i=0;i<2;i++){
+      say(i?`Fixing the meter and rhyme (attempt 2 of 2)...`:'Writing your poem...');
+      const p=parseJSON(await ask(sys,base+fb)),g=toGrid(p),iss=analyze(g);
+      if(iss.length<bestN){best={p,g};bestN=iss.length}
+      if(!iss.length)break;
+      fb='\n\nYour previous draft broke these rules, as counted by the app:\n- '+iss.join('\n- ')+'\nRewrite the whole poem and fix every one.';
+    }
+    state.poem=best.g;if(best.p.title)state.title=best.p.title;
+    if(!state.metaphor.text&&best.p.metaphor){state.metaphor.text=best.p.metaphor}
+    sync();const n=runCheck();save();
+    say(n?`Poem written. ${n} rule issue${n>1?'s':''} left; edit the boxes to fix them.`:'Poem written and every rule checks out. Edit any line you like.');
+  }catch(e){say(e.message||'Something went wrong.',1)}
+  btn.disabled=false;
+};
+
+$('#suggest').onclick=async()=>{
+  if(!state.idea.trim())return say('Write your idea first, then ask for metaphors.',1);
+  const btn=$('#suggest');btn.disabled=true;say('Looking for metaphors...');
+  try{
+    const out=parseJSON(await ask('You help poets find controlling metaphors. Reply with JSON only.',
+      `Idea: ${state.idea}\nPoem language: ${LANG[state.lang]}\nGive 3 distinct controlling metaphors a poem could sustain from first line to last. Return a JSON array: [{"metaphor":"short 'X is Y' sentence in the poem language","images":["6 concrete words from Y's world, in the poem language"],"why":"one short English sentence"}]`));
+    const box=$('#sugg');box.innerHTML='';
+    out.slice(0,3).forEach(o=>{const b=el('button','',o.metaphor);b.append(el('small','',`${o.images.join(', ')}. ${o.why}`));
+      b.onclick=()=>{state.metaphor={text:o.metaphor,images:o.images};$('#metaphor').value=o.metaphor;drawImgs();box.innerHTML='';save()};box.append(b)});
+    say('Pick a metaphor, or write your own.');
+  }catch(e){say(e.message||'Something went wrong.',1)}
+  btn.disabled=false;
+};
+
+// ---- Start ----
+try{const s=JSON.parse(localStorage.getItem('taludtod.current'));if(s&&FORMS[s.form])Object.assign(state,s)}catch{}
+sync();drawDrafts();
+</script>
+</body>
+</html>
