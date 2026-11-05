@@ -26,7 +26,8 @@ label{display:block;font-size:.85rem;font-weight:500;margin-top:10px}
 textarea,select,input[type=text],input[type=number],input[type=password],input:not([type]){width:100%;font:inherit;color:inherit;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
 textarea{resize:vertical}
 button{font:inherit;font-weight:500;border-radius:6px;border:1px solid var(--sea);background:transparent;color:var(--sea);padding:8px 14px;cursor:pointer}
-button.primary{background:var(--sea);color:var(--on-sea)}button:disabled{opacity:.55;cursor:wait}
+button.primary{background:var(--sea);color:var(--on-sea)}
+#undo:disabled,#redo:disabled{cursor:default}button:disabled{opacity:.55;cursor:wait}
 button.link{border:0;padding:2px 6px;text-decoration:underline}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .rail button.primary{width:100%;margin-top:10px}
@@ -105,6 +106,8 @@ menu{display:flex;gap:8px;justify-content:flex-end;padding:0;margin:16px 0 0}
   <input id="title" class="title" placeholder="Title" aria-label="Title">
   <div id="sheet"></div>
   <div class="actions">
+    <button id="undo" disabled>Undo</button>
+    <button id="redo" disabled>Redo</button>
     <button id="check" class="primary">Check poem</button>
     <button id="save">Save draft</button>
     <button id="copy">Copy poem</button>
@@ -178,7 +181,7 @@ function render(){
         const w=el('div','seg'),inp=document.createElement('input');
         inp.type='text';inp.autocomplete='off';inp.spellcheck=false;inp.value=ln[k];
         inp.setAttribute('aria-label',`Saknong ${s+1}, line ${l+1}${t&&d.lines[l].length>1?(k?', second half':', first half'):''}`);
-        inp.addEventListener('input',()=>{state.poem[s][l][k]=inp.value;paint(s,l);save()});
+        inp.addEventListener('input',()=>{state.poem[s][l][k]=inp.value;paint(s,l);save();commitSoon()});
         const m=el('div','meter');w.append(inp,m);segs.append(w);r.meters.push(m);
       });
       row.append(segs);fs.append(row);refs[s][l]=r;
@@ -204,11 +207,11 @@ function sync(){
   reshape();controls();render();drawImgs();$('#customCtl').hidden=state.scheme!=='custom';
 }
 const bind=(id,fn)=>$('#'+id).addEventListener('input',e=>{fn(e.target.value);save()});
-bind('idea',v=>state.idea=v);bind('title',v=>state.title=v);bind('metaphor',v=>state.metaphor.text=v);bind('custom',v=>state.custom=v.toUpperCase());
+bind('idea',v=>state.idea=v);bind('title',v=>{state.title=v;commitSoon()});bind('metaphor',v=>{state.metaphor.text=v;commitSoon()});bind('custom',v=>state.custom=v.toUpperCase());
 $('#scheme').addEventListener('change',e=>{state.scheme=e.target.value;$('#customCtl').hidden=state.scheme!=='custom';$('#report').innerHTML='';save()});
-$('#form').addEventListener('change',e=>{state.form=e.target.value;state.scheme='default';$('#scheme').value='default';$('#customCtl').hidden=true;if(state.form==='binalaybay')state.lang='hil';$('#lang').value=state.lang;reshape();controls();render();$('#report').innerHTML='';save()});
+$('#form').addEventListener('change',e=>{state.form=e.target.value;state.scheme='default';$('#scheme').value='default';$('#customCtl').hidden=true;if(state.form==='binalaybay')state.lang='hil';$('#lang').value=state.lang;reshape();controls();render();$('#report').innerHTML='';save();commit()});
 $('#lang').addEventListener('change',e=>{state.lang=e.target.value;state.poem.forEach((st,s)=>st.forEach((_,l)=>paint(s,l)));save()});
-for(const[id,key,lo,hi]of[['stanzas','stanzas',1,6],['lps','lps',2,12]])$('#'+id).addEventListener('change',e=>{state[key]=Math.min(hi,Math.max(lo,+e.target.value||lo));e.target.value=state[key];reshape();render();save()});
+for(const[id,key,lo,hi]of[['stanzas','stanzas',1,6],['lps','lps',2,12]])$('#'+id).addEventListener('change',e=>{state[key]=Math.min(hi,Math.max(lo,+e.target.value||lo));e.target.value=state[key];reshape();render();save();commit()});
 
 const say=(m,err)=>{const s=$('#status');s.textContent=m;s.className=err?'err':''};
 const save=()=>localStorage.setItem('taludtod.current',JSON.stringify(state));
@@ -224,7 +227,7 @@ $('#copy').onclick=async()=>{
   const t=(state.title?state.title+'\n\n':'')+state.poem.map(st=>st.map(ln=>ln.join(' / ')).join('\n')).join('\n\n');
   try{await navigator.clipboard.writeText(t);say('Poem copied.')}catch{say('Copy failed. Select the text and copy it manually.',1)}
 };
-$('#clear').onclick=()=>{state.poem=state.poem.map(st=>st.map(ln=>ln.map(()=> '')));render();$('#report').innerHTML='';save()};
+$('#clear').onclick=()=>{state.poem=state.poem.map(st=>st.map(ln=>ln.map(()=> '')));render();$('#report').innerHTML='';save();commit()};
 
 // ---- Drafts ----
 const getDrafts=()=>{try{return JSON.parse(localStorage.getItem('taludtod.drafts'))||[]}catch{return[]}};
@@ -233,7 +236,7 @@ function drawDrafts(){
   const ul=$('#drafts');ul.innerHTML='';const ds=getDrafts();
   if(!ds.length){ul.append(el('li','hint','No drafts yet.'));return}
   ds.forEach(d=>{const li=el('li');
-    const b=el('button','link',d.title||FORMS[d.state.form].name);b.onclick=()=>{Object.assign(state,structuredClone(d.state));sync();say('Draft loaded.')};
+    const b=el('button','link',d.title||FORMS[d.state.form].name);b.onclick=()=>{Object.assign(state,structuredClone(d.state));sync();commit();say('Draft loaded.')};
     const x=el('button','link','Delete');x.onclick=()=>{setDrafts(getDrafts().filter(y=>y.id!==d.id));drawDrafts()};
     li.append(b,x);ul.append(li)});
 }
@@ -292,7 +295,7 @@ $('#gen').onclick=async()=>{
     }
     state.poem=best.g;if(best.p.title)state.title=best.p.title;
     if(!state.metaphor.text&&best.p.metaphor){state.metaphor.text=best.p.metaphor}
-    sync();const n=runCheck();save();
+    sync();commit();const n=runCheck();save();
     say(n?`Poem written. ${n} rule issue${n>1?'s':''} left; edit the boxes to fix them.`:'Poem written and every rule checks out. Edit any line you like.');
   }catch(e){say(e.message||'Something went wrong.',1)}
   btn.disabled=false;
@@ -306,11 +309,22 @@ $('#suggest').onclick=async()=>{
       `Idea: ${state.idea}\nPoem language: ${LANG[state.lang]}\nGive 3 distinct controlling metaphors a poem could sustain from first line to last. Return a JSON array: [{"metaphor":"short 'X is Y' sentence in the poem language","images":["6 concrete words from Y's world, in the poem language"],"why":"one short English sentence"}]`));
     const box=$('#sugg');box.innerHTML='';
     out.slice(0,3).forEach(o=>{const b=el('button','',o.metaphor);b.append(el('small','',`${o.images.join(', ')}. ${o.why}`));
-      b.onclick=()=>{state.metaphor={text:o.metaphor,images:o.images};$('#metaphor').value=o.metaphor;drawImgs();box.innerHTML='';save()};box.append(b)});
+      b.onclick=()=>{state.metaphor={text:o.metaphor,images:o.images};$('#metaphor').value=o.metaphor;drawImgs();box.innerHTML='';save();commit()};box.append(b)});
     say('Pick a metaphor, or write your own.');
   }catch(e){say(e.message||'Something went wrong.',1)}
   btn.disabled=false;
 };
+
+// ---- Undo / redo ----
+const hist={past:[],future:[],cur:null,timer:null};
+const snap=()=>JSON.stringify({poem:state.poem,title:state.title,form:state.form,stanzas:state.stanzas,lps:state.lps,metaphor:state.metaphor});
+function histUI(){$('#undo').disabled=!hist.past.length;$('#redo').disabled=!hist.future.length}
+function commit(){clearTimeout(hist.timer);const x=snap();if(x===hist.cur)return;if(hist.cur!==null){hist.past.push(hist.cur);if(hist.past.length>100)hist.past.shift()}hist.cur=x;hist.future=[];histUI()}
+function commitSoon(){clearTimeout(hist.timer);hist.timer=setTimeout(commit,700)}
+function restore(x){Object.assign(state,JSON.parse(x));sync();$('#report').innerHTML='';save();histUI()}
+function undo(){commit();if(!hist.past.length)return;hist.future.push(hist.cur);hist.cur=hist.past.pop();restore(hist.cur)}
+function redo(){commit();if(!hist.future.length)return;hist.past.push(hist.cur);hist.cur=hist.future.pop();restore(hist.cur)}
+$('#undo').onclick=undo;$('#redo').onclick=redo;
 
 // ---- Theme ----
 function setTheme(t){document.documentElement.dataset.theme=t;localStorage.setItem('taludtod.theme',t);$('#theme').textContent=t==='dark'?'Light mode':'Dark mode'}
@@ -319,7 +333,7 @@ $('#theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'
 
 // ---- Start ----
 try{const s=JSON.parse(localStorage.getItem('taludtod.current'));if(s&&FORMS[s.form])Object.assign(state,s)}catch{}
-sync();drawDrafts();
+sync();hist.cur=snap();histUI();drawDrafts();
 </script>
 </body>
 </html>
