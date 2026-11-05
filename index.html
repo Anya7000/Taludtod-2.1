@@ -234,7 +234,8 @@ async function ask(system,user){
   if(!r.ok)throw new Error(`The AI could not respond (${r.status}).`);
   return (await r.json()).text;
 }
-function parseJSON(t){const a=t.indexOf('{'),a2=t.indexOf('['),b=Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));const s=(a2>=0&&(a<0||a2<a))?a2:a;const raw=t.slice(s,b+1);try{return JSON.parse(raw)}catch(e){console.warn('AI reply was not valid JSON:',t);try{return JSON.parse(raw.replace(/,\s*([}\]])/g,'$1'))}catch{throw new Error('The AI sent a reply the app could not read. Please try again.')}}}
+function fixJSON(x){const st=[];let q=false,esc=false;for(const c of x){if(q){if(esc)esc=false;else if(c==='\\')esc=true;else if(c==='"')q=false;continue}if(c==='"')q=true;else if(c==='{')st.push('}');else if(c==='[')st.push(']');else if((c==='}'||c===']')&&st.length)st.pop()}return x.replace(/,\s*$/,'')+(q?'"':'')+st.reverse().join('')}
+function parseJSON(t){const a=t.indexOf('{'),a2=t.indexOf('['),b=Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));const s=(a2>=0&&(a<0||a2<a))?a2:a;const raw=t.slice(s,b+1).replace(/,\s*([}\]])/g,'$1');for(const x of [raw,fixJSON(raw)]){try{return JSON.parse(x)}catch{}}console.warn('AI reply was not valid JSON:',t);throw new Error('The AI sent a reply the app could not read. Please try again.')}
 const LANG={fil:'Filipino (Tagalog)',hil:'Hiligaynon',en:'English'};
 
 function rules(){
