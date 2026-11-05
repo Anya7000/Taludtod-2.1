@@ -115,7 +115,7 @@ menu{display:flex;gap:8px;justify-content:flex-end;padding:0;margin:16px 0 0}
   </div>
   <div id="report"></div>
   <p id="status" role="status"></p>
-  <p class="hint">Syllable counts are approximate. Filipino and Hiligaynon count each vowel letter; stress and elision are not modelled.</p>
+  <p class="hint">Syllable counts and rhyme matches are estimates based on spelling, not a full pronunciation guide. Always read the poem aloud to confirm them. Complete-thought checks use an AI review and may still need your judgment.</p>
 </div>
 </main>
 
@@ -131,6 +131,7 @@ const FORMS={
  dalit:{name:'Dalit',meter:rep(4,8),stanzas:1,fixed:1,rhyme:1,desc:'Four lines of eight syllables, monorhyme. A short verse of praise or devotion.'},
  diona:{name:'Diona',meter:rep(3,7),stanzas:1,fixed:1,rhyme:1,desc:'Three lines of seven syllables, monorhyme. Traditionally about love and courtship.'},
  awit:{name:'Awit (with cesura)',meter:rep(4,[6,6]),cesura:6,rhyme:1,desc:'Stanzas of four lines, twelve syllables each, monorhyme, slow tempo. Every line pauses at a cesura after the sixth syllable, so each line is written 6 ‖ 6.'},
+ other:{name:'Other (12 syllables, 6 ‖ 6)',meter:rep(4,[6,6]),cesura:6,rhyme:1,desc:'A custom form for four-line stanzas. Every line has 12 syllables, divided into two six-syllable phrases by a slash. Both phrases should express complete thoughts, and all four line endings should rhyme.'},
  korido:{name:'Korido',meter:rep(4,8),rhyme:1,desc:'Stanzas of four lines, eight syllables each, monorhyme, brisk tempo. Used for narrative.'},
  haiku:{name:'Haiku',meter:[5,7,5],stanzas:1,fixed:1,desc:'Three lines of 5, 7 and 5 syllables. No required rhyme.'},
  tanka:{name:'Tanka (tangka)',meter:[5,7,5,7,7],stanzas:1,fixed:1,desc:'Five lines of 5, 7, 5, 7 and 7 syllables. No required rhyme.'},
@@ -147,8 +148,9 @@ function reshape(){const d=dims();const g=Array.from({length:d.stanzas},(_,s)=>d
 // ---- Counting ----
 const words=t=>t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/['’`]/g,'').replace(/[^a-z]+/g,' ').trim().split(' ').filter(Boolean);
 function enSyl(w){if(w.length<=3)return 1;w=w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,'').replace(/^y/,'');const m=w.match(/[aeiouy]{1,2}/g);return Math.max(1,m?m.length:1)}
-const count=t=>words(t).reduce((n,w)=>n+(state.lang==='en'?enSyl(w):(w.match(/[aeiou]/g)||[]).length),0);
-function rhymeKey(line){const w=words(line).pop()||'';const m=w.match(/[aeiou][^aeiou]*$/);let k=m?m[0]:w;if(state.lang!=='en')k=k.replace(/e/g,'i').replace(/o/g,'u');return k}
+function filSyl(w){if(w==='mga')return 2;if(w==='ng')return 1;return Math.max(1,(w.match(/[aeiou]/g)||[]).length)}
+const count=t=>words(t).reduce((n,w)=>n+(state.lang==='en'?enSyl(w):filSyl(w)),0);
+function rhymeKey(line){const w=words(line).pop()||'';const m=w.match(/[aeiou][^aeiou]*$/);return m?m[0]:w}
 
 function schemePattern(){const f=FORMS[state.form],sc=state.scheme;if(sc==='none')return null;if(sc==='default')return f.rhyme?['A']:null;const p=(sc==='custom'?state.custom:sc).toUpperCase().replace(/[^A-Z]/g,'');return p?p.split(''):null}
 function analyze(g){
@@ -222,7 +224,26 @@ function runCheck(){
   if(!issues.length){r.append(el('p','good','All requirements met for this form.'));return 0}
   const ul=el('ul');issues.forEach(i=>ul.append(el('li','',i)));r.append(el('strong','',`${issues.length} thing${issues.length>1?'s':''} to fix`),ul);return issues.length;
 }
-$('#check').onclick=runCheck;
+async function runFullCheck(){
+  const btn=$('#check');btn.disabled=true;
+  const issues=analyze(state.poem);
+  if(!issues.length&&dims().f.cesura){
+    try{
+      const review=await reviewCompletePhrases(state.poem);
+      if(review.complete!==true){
+        (Array.isArray(review.issues)?review.issues:[]).forEach(x=>issues.push(
+          `Saknong ${x.stanza||'?'} line ${x.line||'?'} (${x.half||'phrase'}): ${x.explanation||'This half-line does not express a complete thought.'}`
+        ));
+        if(!review.issues?.length)issues.push('The AI reviewer could not confirm that every half-line expresses a complete thought.');
+      }
+    }catch(e){issues.push('The AI could not review phrase completeness. Try again, or check each half-line yourself.')}
+  }
+  const r=$('#report');r.innerHTML='';
+  if(!issues.length)r.append(el('p','good','The structural checks passed, and the AI review found each half-line complete. Read aloud to confirm the estimated syllable counts and rhymes.'));
+  else{const ul=el('ul');issues.forEach(i=>ul.append(el('li','',i)));r.append(el('strong','',`${issues.length} thing${issues.length>1?'s':''} to fix or review`),ul)}
+  btn.disabled=false;
+}
+$('#check').onclick=runFullCheck;
 $('#copy').onclick=async()=>{
   const t=(state.title?state.title+'\n\n':'')+state.poem.map(st=>st.map(ln=>ln.join(' / ')).join('\n')).join('\n\n');
   try{await navigator.clipboard.writeText(t);say('Poem copied.')}catch{say('Copy failed. Select the text and copy it manually.',1)}
@@ -263,7 +284,8 @@ function rules(){
   else L.push('No fixed meter.');
   const pat=schemePattern();
   L.push(pat?(pat.every(x=>x===pat[0])?'All lines in a stanza must end in the same rhyme (monorhyme).':`Rhyme scheme for each stanza: ${pat.join('')}. Lines with the same letter must rhyme; repeat the pattern if a stanza has more lines than letters.`):'No required rhyme.');
-  L.push(state.lang==='en'?'Count syllables as normally pronounced in English.':'Count syllables by vowel letters: each a, e, i, o, u is one syllable (buwan = 2, tao = 2, ay = 1). Match this count exactly.');
+  L.push(state.lang==='en'?'Count syllables as normally pronounced in English.':'Use Filipino/Hiligaynon pronunciation when counting syllables. Do not count letters mechanically when pronunciation differs; read every word aloud and revise until each segment has the required count.');
+  if(f.cesura)L.push('IMPORTANT: Each half-line on either side of the slash must be a complete, meaningful thought or independent clause. Do not use a fragment, dangling phrase, or incomplete grammatical construction as either half. The two halves should also connect meaningfully to each other.');
   return L.join('\n');
 }
 function toGrid(p){
@@ -273,6 +295,19 @@ function toGrid(p){
     if(segs.length===1)return[raw.replace(/\s*\/\s*/g,' ')];
     const parts=raw.split('/').map(x=>x.trim());return segs.map((_,k)=>parts[k]||'');
   }));
+}
+
+// AI review for a requirement that cannot be checked reliably with spelling rules:
+// whether each half-line expresses a complete thought.
+async function reviewCompletePhrases(g){
+  const halves=g.flatMap((st,si)=>st.flatMap((ln,li)=>ln.map((part,pi)=>({
+    stanza:si+1,line:li+1,half:pi===0?'first':'second',text:part
+  }))));
+  const result=parseJSON(await ask(
+    'You are a strict Filipino poetry editor. Evaluate grammar and completeness, not artistic quality. Reply with valid JSON only.',
+    `Language: ${LANG[state.lang]}\nReview every phrase below as a standalone phrase. A phrase passes only if it expresses a complete thought (normally an independent clause with a subject and predicate, or a naturally complete utterance). Reject fragments, dangling modifiers, incomplete dependent clauses, and phrases that only make sense when attached to the other half. Do not demand formal grammar where natural poetic Filipino/Visayan permits a complete utterance.\nPhrases: ${JSON.stringify(halves)}\nReturn exactly this JSON shape: {"complete":true,"issues":[]} . If any phrase is incomplete, set complete to false and list each issue as an object with stanza, line, half, and a short explanation. Do not rewrite the poem.`
+  ));
+  return result;
 }
 
 $('#gen').onclick=async()=>{
@@ -288,15 +323,29 @@ $('#gen').onclick=async()=>{
     for(let i=0;i<2;i++){
       say(i?`Fixing the meter and rhyme (attempt 2 of 2)...`:'Writing your poem...');
       let p;try{p=parseJSON(await ask(sys,base+fb))}catch(e){if(!best)throw e;break}
-      const g=toGrid(p),iss=analyze(g);
+      const g=toGrid(p);
+      let iss=analyze(g);
+      if(!iss.length&&dims().f.cesura){
+        try{
+          const review=await reviewCompletePhrases(g);
+          if(review.complete!==true){
+            const semanticIssues=(Array.isArray(review.issues)?review.issues:[]).map(x=>
+              `Saknong ${x.stanza||'?'} line ${x.line||'?'} (${x.half||'phrase'}): ${x.explanation||'This half-line does not express a complete thought.'}`
+            );
+            iss=semanticIssues.length?semanticIssues:['The AI reviewer could not confirm that every half-line expresses a complete thought.'];
+          }
+        }catch(e){
+          iss=['The app could not complete the AI review of the half-lines. Generate again or check that each half expresses a complete thought.'];
+        }
+      }
       if(iss.length<bestN){best={p,g};bestN=iss.length}
       if(!iss.length)break;
-      fb='\n\nYour previous draft broke these rules, as counted by the app:\n- '+iss.join('\n- ')+'\nRewrite the whole poem and fix every one.';
+      fb='\n\nYour previous draft broke these rules or did not pass the complete-thought review:\n- '+iss.join('\n- ')+'\nRewrite the whole poem and fix every one. Keep every required line and syllable count.';
     }
     state.poem=best.g;if(best.p.title)state.title=best.p.title;
     if(!state.metaphor.text&&best.p.metaphor){state.metaphor.text=best.p.metaphor}
     sync();commit();const n=runCheck();save();
-    say(n?`Poem written. ${n} rule issue${n>1?'s':''} left; edit the boxes to fix them.`:'Poem written and every rule checks out. Edit any line you like.');
+    say(n?`Poem written. ${n} issue${n>1?'s':''} remain; edit the boxes and check the poem again.`:'Poem written. The app checks passed; read it aloud to confirm the syllables and rhymes.');
   }catch(e){say(e.message||'Something went wrong.',1)}
   btn.disabled=false;
 };
