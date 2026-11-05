@@ -267,7 +267,8 @@ $('#gen').onclick=async()=>{
   try{
     for(let i=0;i<2;i++){
       say(i?`Fixing the meter and rhyme (attempt 2 of 2)...`:'Writing your poem...');
-      const p=parseJSON(await ask(sys,base+fb)),g=toGrid(p),iss=analyze(g);
+            let p;try{p=parseJSON(await ask(sys,base+fb))}catch(e){if(!best)throw e;break}
+      const g=toGrid(p),iss=analyze(g);
       if(iss.length<bestN){best={p,g};bestN=iss.length}
       if(!iss.length)break;
       fb='\n\nYour previous draft broke these rules, as counted by the app:\n- '+iss.join('\n- ')+'\nRewrite the whole poem and fix every one.';
