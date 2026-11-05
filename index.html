@@ -234,7 +234,7 @@ async function ask(system,user){
   if(!r.ok)throw new Error(`The AI could not respond (${r.status}).`);
   return (await r.json()).text;
 }
-function parseJSON(t){const a=t.indexOf('{'),a2=t.indexOf('['),b=Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));const s=(a2>=0&&(a<0||a2<a))?a2:a;return JSON.parse(t.slice(s,b+1))}
+function parseJSON(t){const a=t.indexOf('{'),a2=t.indexOf('['),b=Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));const s=(a2>=0&&(a<0||a2<a))?a2:a;const raw=t.slice(s,b+1);try{return JSON.parse(raw)}catch(e){console.warn('AI reply was not valid JSON:',t);try{return JSON.parse(raw.replace(/,\s*([}\]])/g,'$1'))}catch{throw new Error('The AI sent a reply the app could not read. Please try again.')}}}
 const LANG={fil:'Filipino (Tagalog)',hil:'Hiligaynon',en:'English'};
 
 function rules(){
