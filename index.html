@@ -3,12 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.dataset.theme=localStorage.getItem('taludtod.theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')</script>
 <title>Taludtod: Filipino poetry workshop</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--paper:#F2F3EE;--card:#FBFBF8;--ink:#17232E;--muted:#5B6874;--line:#D5DAD3;--sea:#1D5C73;--gold:#B7862A;--ok:#2B7A57;--bad:#B03A48}
+:root{--field:#fff;--chip:#E7ECE6;--on-sea:#fff;--paper:#F2F3EE;--card:#FBFBF8;--ink:#17232E;--muted:#5B6874;--line:#D5DAD3;--sea:#1D5C73;--gold:#B7862A;--ok:#2B7A57;--bad:#B03A48}
+:root[data-theme=dark]{--paper:#121A21;--card:#1A242D;--ink:#E8ECE6;--muted:#9AA6B0;--line:#2D3A45;--sea:#5FB0CC;--gold:#D9AE55;--ok:#5CC08F;--bad:#E5707D;--field:#16202A;--chip:#26343F;--on-sea:#0E1A22;color-scheme:dark}
 *{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 "Instrument Sans",system-ui,sans-serif}
 header{padding:28px clamp(16px,4vw,48px) 8px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
@@ -21,10 +23,10 @@ main{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:28px;padding
 .rail>section{padding:16px 18px;border-bottom:1px solid var(--line)}.rail>section:last-child{border:0}
 .hint{color:var(--muted);font-size:.85rem;margin:6px 0 0}
 label{display:block;font-size:.85rem;font-weight:500;margin-top:10px}
-textarea,select,input[type=text],input[type=number],input[type=password],input:not([type]){width:100%;font:inherit;color:inherit;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+textarea,select,input[type=text],input[type=number],input[type=password],input:not([type]){width:100%;font:inherit;color:inherit;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
 textarea{resize:vertical}
 button{font:inherit;font-weight:500;border-radius:6px;border:1px solid var(--sea);background:transparent;color:var(--sea);padding:8px 14px;cursor:pointer}
-button.primary{background:var(--sea);color:#fff}button:disabled{opacity:.55;cursor:wait}
+button.primary{background:var(--sea);color:var(--on-sea)}button:disabled{opacity:.55;cursor:wait}
 button.link{border:0;padding:2px 6px;text-decoration:underline}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .rail button.primary{width:100%;margin-top:10px}
@@ -32,9 +34,9 @@ button.link{border:0;padding:2px 6px;text-decoration:underline}
 .guide{border-left:4px solid var(--gold);background:var(--card);padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:22px}
 .guide .row{display:flex;gap:8px;flex-wrap:wrap}.guide input{flex:1;min-width:200px}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.chips span{background:#E7ECE6;border-radius:99px;padding:2px 10px;font-size:.85rem}
+.chips span{background:var(--chip);border-radius:99px;padding:2px 10px;font-size:.85rem}
 #sugg{display:grid;gap:8px;margin-top:10px}
-#sugg button{text-align:left;background:#fff;border-color:var(--line);color:var(--ink)}
+#sugg button{text-align:left;background:var(--field);border-color:var(--line);color:var(--ink)}
 #sugg small{display:block;color:var(--muted);font-weight:400}
 .title{font:600 1.5rem Literata,Georgia,serif;border:0!important;border-bottom:1px solid var(--line)!important;background:transparent!important;border-radius:0!important;padding-left:0!important;margin-bottom:14px}
 .stanza{border:0;padding:0;margin:0 0 22px}.stanza legend{font-size:.85rem;color:var(--muted);padding:0;margin-bottom:6px}
@@ -59,6 +61,7 @@ menu{display:flex;gap:8px;justify-content:flex-end;padding:0;margin:16px 0 0}
 <body>
 <header>
   <div><h1>Taludtod</h1><p>Write Filipino verse in forms that keep their shape. Give the AI an idea, or fill in the lines yourself.</p></div>
+  <button id="theme" aria-label="Switch between light and dark mode">Dark mode</button>
 </header>
 <main>
 <aside class="rail">
@@ -72,6 +75,15 @@ menu{display:flex;gap:8px;justify-content:flex-end;padding:0;margin:16px 0 0}
     <h2>Form</h2>
     <select id="form" aria-label="Poetic form"></select>
     <p id="formDesc" class="hint"></p>
+    <label>Rhyme scheme
+      <select id="scheme">
+        <option value="default">Form default</option><option value="none">No rhyme</option>
+        <option value="AAAA">Monorhyme (AAAA)</option><option value="AABB">AABB</option><option value="ABAB">ABAB</option>
+        <option value="ABBA">ABBA</option><option value="ABCB">ABCB</option><option value="custom">Custom pattern...</option>
+      </select>
+    </label>
+    <label id="customCtl" hidden>Custom pattern<input id="custom" maxlength="12" placeholder="e.g. AABCCB"></label>
+    <p class="hint">Each letter is one line; lines with the same letter must rhyme. The pattern repeats in every stanza. The traditional forms use monorhyme.</p>
     <div class="row2">
       <label>Language<select id="lang"><option value="fil">Filipino</option><option value="hil">Hiligaynon</option><option value="en">English</option></select></label>
       <label id="stCtl">Stanzas<input id="stanzas" type="number" min="1" max="6"></label>
@@ -124,7 +136,7 @@ const FORMS={
 };
 for(const k in FORMS){const o=el('option','',FORMS[k].name);o.value=k;$('#form').append(o)}
 
-const state={form:'tanaga',lang:'fil',stanzas:2,lps:4,idea:'',title:'',metaphor:{text:'',images:[]},poem:[]};
+const state={scheme:'default',custom:'',form:'tanaga',lang:'fil',stanzas:2,lps:4,idea:'',title:'',metaphor:{text:'',images:[]},poem:[]};
 const segsOf=m=>Array.isArray(m)?m:[m];
 function dims(){const f=FORMS[state.form];return{f,stanzas:f.fixed?f.stanzas:state.stanzas,lines:f.meter||rep(state.lps,null)}}
 function reshape(){const d=dims();const g=Array.from({length:d.stanzas},(_,s)=>d.lines.map((m,l)=>segsOf(m).map((_,k)=>state.poem?.[s]?.[l]?.[k]||'')));state.poem=g}
@@ -135,6 +147,7 @@ function enSyl(w){if(w.length<=3)return 1;w=w.replace(/(?:[^laeiouy]es|ed|[^laei
 const count=t=>words(t).reduce((n,w)=>n+(state.lang==='en'?enSyl(w):(w.match(/[aeiou]/g)||[]).length),0);
 function rhymeKey(line){const w=words(line).pop()||'';const m=w.match(/[aeiou][^aeiou]*$/);let k=m?m[0]:w;if(state.lang!=='en')k=k.replace(/e/g,'i').replace(/o/g,'u');return k}
 
+function schemePattern(){const f=FORMS[state.form],sc=state.scheme;if(sc==='none')return null;if(sc==='default')return f.rhyme?['A']:null;const p=(sc==='custom'?state.custom:sc).toUpperCase().replace(/[^A-Z]/g,'');return p?p.split(''):null}
 function analyze(g){
   const d=dims(),out=[];
   g.forEach((st,s)=>{
@@ -145,7 +158,8 @@ function analyze(g){
       if(d.f.meter)segsOf(d.lines[l]).forEach((t,k)=>{const c=count(ln[k]);if(c!==t)out.push(`Saknong ${s+1}, line ${l+1}${ln.length>1?(k?' (second half)':' (first half)'):''} has ${c} syllables; it needs ${t}.`)});
       keys.push([l,rhymeKey(full)]);
     });
-    if(d.f.rhyme&&keys.length>1)keys.slice(1).forEach(([l,k])=>{if(k!==keys[0][1])out.push(`Saknong ${s+1}, line ${l+1} does not rhyme with line ${keys[0][0]+1} (ends in "-${k}", expected "-${keys[0][1]}").`)});
+    const pat=schemePattern();
+    if(pat&&keys.length>1){const first={};keys.forEach(([l,k])=>{const g=pat[l%pat.length];if(!(g in first))first[g]=[l,k];else if(first[g][1]!==k)out.push(`Saknong ${s+1}, line ${l+1} should rhyme with line ${first[g][0]+1} (${g}), but ends in "-${k}" instead of "-${first[g][1]}".`)})}
   });
   return out;
 }
@@ -186,12 +200,13 @@ function paint(s,l){
 function controls(){const f=FORMS[state.form];$('#formDesc').textContent=f.desc;$('#stCtl').hidden=!!f.fixed;$('#lpCtl').hidden=!!f.meter}
 function drawImgs(){const b=$('#imgs');b.innerHTML='';state.metaphor.images.forEach(w=>b.append(el('span','',w)))}
 function sync(){
-  for(const[id,v]of[['idea',state.idea],['title',state.title],['form',state.form],['lang',state.lang],['stanzas',state.stanzas],['lps',state.lps],['metaphor',state.metaphor.text]])$('#'+id).value=v;
-  reshape();controls();render();drawImgs();
+  for(const[id,v]of[['idea',state.idea],['title',state.title],['form',state.form],['lang',state.lang],['stanzas',state.stanzas],['scheme',state.scheme],['custom',state.custom],['lps',state.lps],['metaphor',state.metaphor.text]])$('#'+id).value=v;
+  reshape();controls();render();drawImgs();$('#customCtl').hidden=state.scheme!=='custom';
 }
 const bind=(id,fn)=>$('#'+id).addEventListener('input',e=>{fn(e.target.value);save()});
-bind('idea',v=>state.idea=v);bind('title',v=>state.title=v);bind('metaphor',v=>state.metaphor.text=v);
-$('#form').addEventListener('change',e=>{state.form=e.target.value;if(state.form==='binalaybay')state.lang='hil';$('#lang').value=state.lang;reshape();controls();render();$('#report').innerHTML='';save()});
+bind('idea',v=>state.idea=v);bind('title',v=>state.title=v);bind('metaphor',v=>state.metaphor.text=v);bind('custom',v=>state.custom=v.toUpperCase());
+$('#scheme').addEventListener('change',e=>{state.scheme=e.target.value;$('#customCtl').hidden=state.scheme!=='custom';$('#report').innerHTML='';save()});
+$('#form').addEventListener('change',e=>{state.form=e.target.value;state.scheme='default';$('#scheme').value='default';$('#customCtl').hidden=true;if(state.form==='binalaybay')state.lang='hil';$('#lang').value=state.lang;reshape();controls();render();$('#report').innerHTML='';save()});
 $('#lang').addEventListener('change',e=>{state.lang=e.target.value;state.poem.forEach((st,s)=>st.forEach((_,l)=>paint(s,l)));save()});
 for(const[id,key,lo,hi]of[['stanzas','stanzas',1,6],['lps','lps',2,12]])$('#'+id).addEventListener('change',e=>{state[key]=Math.min(hi,Math.max(lo,+e.target.value||lo));e.target.value=state[key];reshape();render();save()});
 
@@ -226,11 +241,11 @@ $('#save').onclick=()=>{setDrafts([{id:Date.now(),title:state.title,state:struct
 
 // ---- AI ----
 // Paste your deployed Cloudflare Worker URL here (see worker.js).
-const AI_URL='https://taludtod-ai.ddpacete.workers.dev';
+const AI_URL='https://taludtod-ai.ddpacete.workers.dev/';
 async function ask(system,user){
   if(AI_URL.includes('YOUR-NAME'))throw new Error('The AI is not connected yet. Set AI_URL in index.html.');
   let r;try{r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({system,user})})}catch{throw new Error('Could not reach the AI. Check your connection, or write the poem yourself.')}
-  if(r.status===429)throw new Error('The free AI is busy or out of quota right now. Try again in a minute, or write the poem yourself.');
+  if(r.status===429||r.status===503)throw new Error('The free AI is busy or out of quota right now. Try again in a minute, or write the poem yourself.');
   if(!r.ok)throw new Error(`The AI could not respond (${r.status}).`);
   return (await r.json()).text;
 }
@@ -243,7 +258,8 @@ function rules(){
   if(f.meter){L.push('Syllables per line, in order: '+lines.map(m=>segsOf(m).reduce((a,b)=>a+b,0)).join(', ')+'.');
     if(f.cesura)L.push(`Write every line as two halves separated by " / " (the cesura), ${f.cesura} syllables on each side.`)}
   else L.push('No fixed meter.');
-  L.push(f.rhyme?'All lines in a stanza must end in the same rhyme (monorhyme).':'No required rhyme.');
+  const pat=schemePattern();
+  L.push(pat?(pat.every(x=>x===pat[0])?'All lines in a stanza must end in the same rhyme (monorhyme).':`Rhyme scheme for each stanza: ${pat.join('')}. Lines with the same letter must rhyme; repeat the pattern if a stanza has more lines than letters.`):'No required rhyme.');
   L.push(state.lang==='en'?'Count syllables as normally pronounced in English.':'Count syllables by vowel letters: each a, e, i, o, u is one syllable (buwan = 2, tao = 2, ay = 1). Match this count exactly.');
   return L.join('\n');
 }
@@ -268,7 +284,7 @@ $('#gen').onclick=async()=>{
   try{
     for(let i=0;i<2;i++){
       say(i?`Fixing the meter and rhyme (attempt 2 of 2)...`:'Writing your poem...');
-            let p;try{p=parseJSON(await ask(sys,base+fb))}catch(e){if(!best)throw e;break}
+      let p;try{p=parseJSON(await ask(sys,base+fb))}catch(e){if(!best)throw e;break}
       const g=toGrid(p),iss=analyze(g);
       if(iss.length<bestN){best={p,g};bestN=iss.length}
       if(!iss.length)break;
@@ -295,6 +311,11 @@ $('#suggest').onclick=async()=>{
   }catch(e){say(e.message||'Something went wrong.',1)}
   btn.disabled=false;
 };
+
+// ---- Theme ----
+function setTheme(t){document.documentElement.dataset.theme=t;localStorage.setItem('taludtod.theme',t);$('#theme').textContent=t==='dark'?'Light mode':'Dark mode'}
+setTheme(document.documentElement.dataset.theme);
+$('#theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 
 // ---- Start ----
 try{const s=JSON.parse(localStorage.getItem('taludtod.current'));if(s&&FORMS[s.form])Object.assign(state,s)}catch{}
