@@ -273,7 +273,9 @@ function rules(){
   L.push(pat?(pat.every(x=>x===pat[0])?'All lines in a stanza must end in the same rhyme (monorhyme).':`Rhyme scheme for each stanza: ${pat.join('')}. Lines with the same letter must rhyme; repeat the pattern if a stanza has more lines than letters.`):'No required rhyme.');
   if(state.lang==='en') L.push('Count English syllables by normal spoken pronunciation, not by the number of written vowels. Check every line aloud and revise until each line has exactly its target count.');
   else L.push("Taludtod's checker counts Filipino/Hiligaynon syllables by vowel letters: each written a, e, i, o, u counts as one syllable; standalone 'ng' counts as 1; the word 'mga' counts as 2. Examples: buwan=2, tao=2, ay=1, araw=2, buhay=2, mga=2, ng=1. Use this exact counting convention so your lines pass the app's checker. Do not add or omit syllables. Count every line and every half-line before returning the poem.");
-  if(f.meter) L.push('STRICT METER RULE: Treat the syllable targets as mandatory, not approximate. Draft each line, count its syllables, replace words as needed, and recount. Return only a poem whose every line (and every cesura half, if present) exactly matches the target.');
+  if(f.meter) L.push('STRICT METER RULE: Treat every syllable target as mandatory. Draft each line, count it, revise it, and recount. However, do not create nonsense to meet the count: no clipped words, invented words, broken grammar, random filler, or meaningless endings. Exact meter AND clear natural language are both required.');
+  L.push('POETIC QUALITY RULES (equally important as meter): Write complete, coherent thoughts in natural '+LANG[state.lang]+'. Use correct spelling, word forms, grammar, and syntax. Each line must make sense on its own and contribute to a connected poem. Use concrete, relevant images and a consistent point of view. Avoid awkward inversions, word salad, unexplained fragments, repeated filler, and words chosen only because they rhyme. Do not truncate a word to force a rhyme. The poem must sound like something a fluent speaker would actually say.');
+  L.push('Before returning, silently perform two separate checks: (1) count every syllable and cesura half exactly using the stated convention; (2) read every line for grammar, clarity, and logical connection. Rewrite any line that fails either check.');
   return L.join('\n');
 }
 function toGrid(p){
@@ -288,11 +290,11 @@ function toGrid(p){
 $('#gen').onclick=async()=>{
   if(!state.idea.trim())return say('Write your idea first.',1);
   const btn=$('#gen');btn.disabled=true;
-  const sys='You are the strict metrical poetry writer inside Taludtod. Write original poems only. Exact syllable counts are mandatory. Before returning JSON, count every line and every required half-line using the counting rules supplied by the app; revise any line that is short or long. Never claim compliance unless every count is exact. Reply with valid JSON only, with no markdown fences or commentary.';
+  const sys='You are an experienced Filipino-language poet and careful poetry editor inside Taludtod. Write natural, grammatically correct, meaningful poetry in the selected language. Exact syllable counts are mandatory, but NEVER achieve meter by cutting words short, inventing words, attaching random syllables, using malformed spelling, or sacrificing grammar and meaning for rhyme. Every line must communicate a clear thought and connect logically to the poem. Use ordinary, idiomatic vocabulary appropriate to the selected language. Do not end lines with incomplete fragments such as a cut-off prefix or an unfinished word. Do not use filler words just to complete the count. Before returning JSON, count every line and every required half-line using the app counting rules, then revise until exact. Read the poem as natural speech and check grammar, meaning, and flow. If a rhyme cannot be achieved naturally, choose a different natural word or restructure the line; never force a nonsensical rhyme. Reply with valid JSON only, no markdown fences or commentary.';
   const base=`Idea: ${state.idea}\nLanguage: ${LANG[state.lang]}\nControlling metaphor: ${state.metaphor.text||'none given; choose one strong metaphor yourself'}\n`+
     (state.metaphor.images.length?`Image bank to draw from: ${state.metaphor.images.join(', ')}\n`:'')+
-    `Keep the controlling metaphor extended and consistent through the whole poem; do not mix in unrelated images.\n\nForm rules:\n${rules()}\n\n`+
-    'Return JSON: {"title":"...","metaphor":"the controlling metaphor you used, one short sentence","stanzas":[["line","line"],["line","line"]]}';
+    `Keep the controlling metaphor extended and consistent through the whole poem; do not mix in unrelated images.\nWrite in fluent, idiomatic language. Meaning and grammatical correctness are not optional. Never invent or truncate words to satisfy syllable count or rhyme. Do not use nonsense endings or incomplete fragments. Prefer a simpler, clear line over an ornate but incoherent one.\n\nForm rules:\n${rules()}\n\n`+
+    'Return JSON only: {"title":"...","metaphor":"the controlling metaphor you used, one short sentence","stanzas":[["complete natural line","complete natural line"]]}. Every line must be grammatical and meaningful, not a string of words assembled only to rhyme.';
   let best=null,bestN=1e9,fb='';
   try{
     for(let i=0;i<5;i++){
@@ -301,12 +303,12 @@ $('#gen').onclick=async()=>{
       const g=toGrid(p),iss=analyze(g);
       if(iss.length<bestN){best={p,g};bestN=iss.length}
       if(!iss.length)break;
-      fb='\n\nSTRICT CORRECTION REQUIRED. Your previous draft failed the app checker. These are the exact errors:\n- '+iss.join('\n- ')+'\nRewrite the entire poem. Do not merely explain the errors. Change the wording and count each line again. Every target must match exactly. Return valid JSON only.';
+      fb='\n\nSTRICT CORRECTION REQUIRED. Your previous draft failed the app checker. Exact count errors:\n- '+iss.join('\n- ')+'\nRewrite the entire poem and fix every count. IMPORTANT: keep the language fluent and meaningful. Do not clip, invent, or deform words; do not use random filler or broken grammar to force meter or rhyme. Every line must be a complete, coherent thought. Count again before returning valid JSON only.';
     }
     state.poem=best.g;if(best.p.title)state.title=best.p.title;
     if(!state.metaphor.text&&best.p.metaphor){state.metaphor.text=best.p.metaphor}
     sync();commit();const n=runCheck();save();
-    say(n?`Draft generated, but ${n} meter/form issue${n>1?'s remain':' remains'}. It did not pass the strict checker; edit the marked lines or generate again.`:'Poem written and every meter/form rule checks out. Edit any line you like.');
+    say(n?`Draft generated, but ${n} meter/form issue${n>1?'s remain':' remains'}. It has NOT passed validation. Review the lines; do not treat this draft as finished.`:'Meter checks passed. Please still read the poem for natural grammar, clear meaning, and coherent flow.');
   }catch(e){say(e.message||'Something went wrong.',1)}
   btn.disabled=false;
 };
