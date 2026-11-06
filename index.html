@@ -130,7 +130,7 @@ const FORMS={
  tanaga:{name:'Tanaga',meter:rep(4,7),stanzas:1,fixed:1,rhyme:1,desc:'Four lines of seven syllables with one rhyme throughout (monorhyme). A compact native verse, often an insight or proverb.'},
  dalit:{name:'Dalit',meter:rep(4,8),stanzas:1,fixed:1,rhyme:1,desc:'Four lines of eight syllables, monorhyme. A short verse of praise or devotion.'},
  diona:{name:'Diona',meter:rep(3,7),stanzas:1,fixed:1,rhyme:1,desc:'Three lines of seven syllables, monorhyme. Traditionally about love and courtship.'},
- awit:{name:'Awit (with cesura)',meter:rep(4,[6,6]),cesura:6,rhyme:1,desc:'Stanzas of four lines, twelve syllables each, monorhyme, slow tempo. Every line pauses at a cesura after the sixth syllable, so each line is written 6 ‖ 6.'},
+ awit:{name:'Awit (with cesura)',meter:rep(4,[6,6]),cesura:6,rhyme:1,desc:'Stanzas of four lines, twelve syllables each, monorhyme, slow tempo. Every line pauses at a cesura after the sixth syllable, so each line is written 6 / 6.'},
  korido:{name:'Korido',meter:rep(4,8),rhyme:1,desc:'Stanzas of four lines, eight syllables each, monorhyme, brisk tempo. Used for narrative.'},
  haiku:{name:'Haiku',meter:[5,7,5],stanzas:1,fixed:1,desc:'Three lines of 5, 7 and 5 syllables. No required rhyme.'},
  tanka:{name:'Tanka (tangka)',meter:[5,7,5,7,7],stanzas:1,fixed:1,desc:'Five lines of 5, 7, 5, 7 and 7 syllables. No required rhyme.'},
@@ -177,7 +177,7 @@ function render(){
       const row=el('div','line');row.append(el('span','ln',l+1));
       const segs=el('div','segs'),r={meters:[]};
       segsOf(d.lines[l]).forEach((t,k)=>{
-        if(k)segs.append(el('span','cesura','‖'));
+        if(k)segs.append(el('span','cesura','/'));
         const w=el('div','seg'),inp=document.createElement('input');
         inp.type='text';inp.autocomplete='off';inp.spellcheck=false;inp.value=ln[k];
         inp.setAttribute('aria-label',`Saknong ${s+1}, line ${l+1}${t&&d.lines[l].length>1?(k?', second half':', first half'):''}`);
@@ -249,17 +249,54 @@ async function ask(system,user){
   if(AI_URL.includes('YOUR-NAME'))throw new Error('The AI is not connected yet. Set AI_URL in index.html.');
   let r;try{r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({system,user})})}catch{throw new Error('Could not reach the AI. Check your connection, or write the poem yourself.')}
   if(r.status===429||r.status===503)throw new Error('The free AI is busy or out of quota right now. Try again in a minute, or write the poem yourself.');
-  if(!r.ok)throw new Error(`The AI could not respond (${r.status}).`);
-  return (await r.json()).text;
+  const raw=await r.text();
+  let data;
+  try{data=JSON.parse(raw)}catch{
+    if(!r.ok)throw new Error(`The AI could not respond (${r.status}).`);
+    // Some proxy configurations return the model text directly.
+    if(raw.trim())return raw;
+    throw new Error('The AI returned an empty reply. Please try again.');
+  }
+  if(!r.ok)throw new Error(data.error||data.message||`The AI could not respond (${r.status}).`);
+  if(typeof data.text==='string'&&data.text.trim())return data.text;
+  if(typeof data.response==='string'&&data.response.trim())return data.response;
+  if(data.error||data.message)throw new Error(String(data.error||data.message));
+  throw new Error('The AI service responded, but did not include poem text. Please try again.');
 }
 function fixJSON(x){const st=[];let q=false,esc=false;for(const c of x){if(q){if(esc)esc=false;else if(c==='\\')esc=true;else if(c==='"')q=false;continue}if(c==='"')q=true;else if(c==='{')st.push('}');else if(c==='[')st.push(']');else if((c==='}'||c===']')&&st.length)st.pop()}return x.replace(/,\s*$/,'')+(q?'"':'')+st.reverse().join('')}
-function parseJSON(t){const a=t.indexOf('{'),a2=t.indexOf('['),b=Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));const s=(a2>=0&&(a<0||a2<a))?a2:a;const raw=t.slice(s,b+1).replace(/,\s*([}\]])/g,'$1');for(const x of [raw,fixJSON(raw)]){try{return JSON.parse(x)}catch{}}console.warn('AI reply was not valid JSON:',t);throw new Error('The AI sent a reply the app could not read. Please try again.')}
+function parseJSON(value){
+  const t=String(value??'').replace(/^\uFEFF/,'').trim();
+  // Gemini may wrap otherwise-valid JSON in Markdown fences or brief prose.
+  const start=t.search(/[{\[]/);
+  if(start<0)throw new Error('The AI reply did not contain JSON. Please try again.');
+  const opener=t[start],closer=opener==='{'?'}':']';
+  let depth=0,inString=false,escaped=false,end=-1;
+  for(let i=start;i<t.length;i++){
+    const c=t[i];
+    if(inString){
+      if(escaped)escaped=false;
+      else if(c==='\\')escaped=true;
+      else if(c==='"')inString=false;
+      continue;
+    }
+    if(c==='"'){inString=true;continue}
+    if(c===opener)depth++;
+    else if(c===closer){depth--;if(depth===0){end=i+1;break}}
+  }
+  if(end<0)throw new Error('The AI reply was incomplete JSON. Please try again.');
+  const raw=t.slice(start,end);
+  for(const candidate of [raw,raw.replace(/,\s*([}\]])/g,'$1')]){
+    try{return JSON.parse(candidate)}catch{}
+  }
+  console.warn('AI reply was not valid JSON:',t);
+  throw new Error('The AI sent a reply the app could not read. Please try again.');
+}
 const LANG={fil:'Filipino (Tagalog)',hil:'Hiligaynon',en:'English'};
 
 function rules(){
   const{f,stanzas,lines}=dims(),L=[`${f.name}: ${f.desc}`,`Exactly ${stanzas} stanza(s), each with exactly ${lines.length} lines.`];
   if(f.meter){L.push('Syllables per line, in order: '+lines.map(m=>segsOf(m).reduce((a,b)=>a+b,0)).join(', ')+'.');
-    if(f.cesura)L.push(`Write every line as two halves separated by " / " (the cesura), ${f.cesura} syllables on each side.`)}
+    if(f.cesura)L.push(`Write every line as two meaningful, grammatically complete phrases separated by " / " (the cesura), exactly ${f.cesura} syllables on each side. Both halves must express a complete thought; do not use a dangling fragment merely to satisfy the count.`)}
   else L.push('No fixed meter.');
   const pat=schemePattern();
   L.push(pat?(pat.every(x=>x===pat[0])?'All lines in a stanza must end in the same rhyme (monorhyme).':`Rhyme scheme for each stanza: ${pat.join('')}. Lines with the same letter must rhyme; repeat the pattern if a stanza has more lines than letters.`):'No required rhyme.');
