@@ -255,13 +255,51 @@ $('#save').onclick=()=>{setDrafts([{id:Date.now(),title:state.title,state:struct
 const AI_URL='https://taludtod-ai.ddpacete.workers.dev/';
 async function ask(system,user){
   if(AI_URL.includes('YOUR-NAME'))throw new Error('The AI is not connected yet. Set AI_URL in index.html.');
-  let r;try{r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({system,user})})}catch{throw new Error('Could not reach the AI. Check your connection, or write the poem yourself.')}
+  let r;
+  try{
+    r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({system,user})});
+  }catch{throw new Error('Could not reach the AI. Check your connection, or write the poem yourself.');}
   if(r.status===429||r.status===503)throw new Error('The free AI is busy or out of quota right now. Try again in a minute, or write the poem yourself.');
-  if(!r.ok)throw new Error(`The AI could not respond (${r.status}).`);
-  return (await r.json()).text;
+  const raw=await r.text();
+  let data;
+  try{data=JSON.parse(raw)}catch{throw new Error(`The AI service returned an unreadable response (HTTP ${r.status}). Please try again. If this continues, the Worker response needs checking.`)}
+  if(!r.ok)throw new Error(data?.error||data?.message||`The AI could not respond (${r.status}).`);
+  // The Worker normally returns {text, provider}; accept common compatible shapes too.
+  const result=typeof data==='string'?data:
+    typeof data?.text==='string'?data.text:
+    typeof data?.output==='string'?data.output:
+    typeof data?.response==='string'?data.response:null;
+  if(typeof result!=='string'||!result.trim())throw new Error('The AI service responded, but the Worker did not return poem text. Check the Worker response format.');
+  return result.trim();
 }
-function fixJSON(x){const st=[];let q=false,esc=false;for(const c of x){if(q){if(esc)esc=false;else if(c==='\\')esc=true;else if(c==='"')q=false;continue}if(c==='"')q=true;else if(c==='{')st.push('}');else if(c==='[')st.push(']');else if((c==='}'||c===']')&&st.length)st.pop()}return x.replace(/,\s*$/,'')+(q?'"':'')+st.reverse().join('')}
-function parseJSON(t){const a=t.indexOf('{'),a2=t.indexOf('['),b=Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));const s=(a2>=0&&(a<0||a2<a))?a2:a;const raw=t.slice(s,b+1).replace(/,\s*([}\]])/g,'$1');for(const x of [raw,fixJSON(raw)]){try{return JSON.parse(x)}catch{}}console.warn('AI reply was not valid JSON:',t);throw new Error('The AI sent a reply the app could not read. Please try again.')}
+function extractJSON(text){
+  if(typeof text!=='string')throw new Error('The AI reply was empty or was not text.');
+  let source=text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();
+  // First try the complete response as JSON.
+  try{return JSON.parse(source)}catch{}
+  // Otherwise find the first complete JSON object/array, ignoring braces inside strings.
+  for(let start=0;start<source.length;start++){
+    const opening=source[start];if(opening!=='{'&&opening!=='[')continue;
+    const stack=[];let inString=false,escaped=false;
+    for(let i=start;i<source.length;i++){
+      const ch=source[i];
+      if(inString){if(escaped)escaped=false;else if(ch==='\\')escaped=true;else if(ch==='"')inString=false;continue;}
+      if(ch==='"'){inString=true;continue;}
+      if(ch==='{' )stack.push('}');
+      else if(ch==='[')stack.push(']');
+      else if(ch==='}'||ch===']'){
+        if(!stack.length||stack.pop()!==ch)break;
+        if(!stack.length){
+          const candidate=source.slice(start,i+1).replace(/,\s*([}\]])/g,'$1');
+          try{return JSON.parse(candidate)}catch{break;}
+        }
+      }
+    }
+  }
+  console.warn('AI reply could not be parsed. First 500 characters:',source.slice(0,500));
+  throw new Error('The AI returned text that was not valid JSON. Please try Generate again. If it keeps happening, send me the browser console message so I can identify the exact response.');
+}
+function parseJSON(text){return extractJSON(text)}
 const LANG={fil:'Filipino (Tagalog)',hil:'Hiligaynon',en:'English'};
 
 function rules(){
